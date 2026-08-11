@@ -1,0 +1,7 @@
+# Package definition for eza
+
+package_name: eza
+github_repo: eza-community/eza
+artifact_format: tar.gz
+
+# Build for all Debian suites and all supported architectures.
