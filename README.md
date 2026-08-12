@@ -1,3 +1,5 @@
+![eza for Debian](.github/readme-header.png)
+
 # eza for Debian
 
 [eza](https://github.com/eza-community/eza) — a modern, maintained replacement
@@ -23,7 +25,9 @@ sudo dpkg -i eza_*.deb
 ## Supported distributions & architectures
 
 - Debian Bookworm (12), Trixie (13), Forky (14/testing), Sid (unstable)
-- amd64, arm64, armel, armhf, ppc64el, s390x, riscv64
+- amd64, arm64, armhf
+
+  (eza's upstream releases only publish amd64/arm64/armhf Linux binaries)
 
 ## Disclaimer
 
