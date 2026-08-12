@@ -3,5 +3,6 @@
 package_name: eza
 github_repo: eza-community/eza
 artifact_format: tar.gz
+description: "A modern alternative to ls"
 
 # Build for all Debian suites and all supported architectures.
