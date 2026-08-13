@@ -2,6 +2,7 @@
 
 package_name: eza
 github_repo: eza-community/eza
+license: EUPL-1.2
 artifact_format: tar.gz
 description: "A modern alternative to ls"
 
