@@ -1,0 +1,43 @@
+name: Debug Ubuntu build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build eza
+        uses: ranjithrajv/debian-multiarch-builder@6919fa711c65b6966f4daaa7d53327f271c42826 # v.0.1a29
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG_LAZY_LOADING: 'true'
+        with:
+          config-file: 'package.yaml'
+          version: v0.23.5
+          build-version: 2
+          architecture: amd64
+
+      - name: Dump docker build logs
+        if: always()
+        run: |
+          shopt -s nullglob
+          for f in /tmp/docker-build-*.log; do
+            echo "===================== $f ====================="
+            tail -40 "$f"
+          done
+
+      - name: Dump per-arch worker logs
+        if: always()
+        run: |
+          shopt -s nullglob
+          for f in build_*.log; do
+            echo "===================== $f ====================="
+            tail -40 "$f"
+          done
