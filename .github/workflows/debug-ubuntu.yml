@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build eza
-        uses: ranjithrajv/debian-multiarch-builder@8c41cd9ef53907bfd22aedbc3b9a3d832249e32e # v.0.1a29
+        uses: ranjithrajv/debian-multiarch-builder@cdb99d2fb282d18ca110788e2c559526666948a4 # v.0.1a29
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG_LAZY_LOADING: 'true'
