@@ -24,6 +24,20 @@ jobs:
           build-version: 2
           architecture: amd64
 
+      - name: Inspect action copy
+        if: always()
+        run: |
+          echo "--- builder source in workspace ---"
+          grep -n "BASE_IMAGE" src/Dockerfile src/lib/build.sh build.sh 2>/dev/null | head -10
+
+      - name: Test ARG-before-FROM semantics
+        if: always()
+        run: |
+          mkdir -p /tmp/dt
+          printf 'ARG B=debian:bookworm\nFROM ${B}\nRUN cat /etc/os-release | head -2\n' > /tmp/dt/Dockerfile
+          docker build --build-arg B=ubuntu:jammy -t argtest /tmp/dt 2>&1 | tail -8
+          docker run --rm argtest 2>&1 | head -3 || true
+
       - name: Dump docker build logs
         if: always()
         run: |
