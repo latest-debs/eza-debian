@@ -2,15 +2,22 @@
 
 # eza for Debian
 
+[![Release](https://img.shields.io/github/v/release/latest-debs/eza-debian)](https://github.com/latest-debs/eza-debian/releases)
+[![Build](https://github.com/latest-debs/eza-debian/actions/workflows/release.yml/badge.svg)](../../actions)
+
 [eza](https://github.com/eza-community/eza) — a modern, maintained replacement
 for `ls` — packaged for Debian as part of
 [latest-debs](https://github.com/latest-debs).
+
+Want your own project packaged and maintained this way? See the
+[latest-debs packaging service](https://github.com/latest-debs/apt-repo/blob/main/SERVICE.md).
 
 ## Install
 
 Via the latest-debs apt repository:
 
 ```sh
+sudo apt install extrepo  # if not already installed
 sudo extrepo enable latest-debs
 sudo apt update
 sudo apt install eza
@@ -19,15 +26,27 @@ sudo apt install eza
 Or download a `.deb` from the [Releases](https://github.com/latest-debs/eza-debian/releases) page:
 
 ```sh
-sudo dpkg -i eza_*.deb
+sudo apt install ./eza_*.deb
+```
+
+## Verify
+
+```sh
+apt-cache policy eza
+eza --version
 ```
 
 ## Supported distributions & architectures
 
 - Debian Bookworm (12), Trixie (13), Forky (14/testing), Sid (unstable)
 - amd64, arm64, armhf
-
   (eza's upstream releases only publish amd64/arm64/armhf Linux binaries)
+
+## Building
+
+Run the [Build eza for Debian](../../actions) workflow on GitHub with the
+desired upstream version. Packaging is driven by
+[debian-multiarch-builder](https://github.com/ranjithrajv/debian-multiarch-builder).
 
 ## Collaborate with us
 
@@ -38,5 +57,20 @@ hiccup, we'd love your help. Open an issue on this repo, or email
 
 ## Disclaimer
 
-Unofficial packaging only. For issues with eza itself, see
+Unofficial, volunteer-run packaging — **best-effort, no SLA**.
+
+- **Update cadence:** publishing a release normally triggers an immediate
+  apt-repo rebuild via webhook; the ~6h scheduled run is the fallback. GitHub
+  outages, a missing trigger token, rate limits, or upstream archive changes
+  can delay or skip an update; there is no freshness guarantee.
+- **Draft releases:** every build is published as a *draft* that a maintainer
+  reviews before promoting, so a new version can lag its build.
+
+For issues with eza itself, see
 [eza-community/eza](https://github.com/eza-community/eza).
+
+## License
+
+Packaging scripts in this repo are MIT-licensed. The packaged binaries
+remain under their upstream license (`EUPL-1.2` — see
+[eza-community/eza](https://github.com/eza-community/eza)).
