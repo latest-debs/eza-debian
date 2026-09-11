@@ -160,6 +160,10 @@ jobs:
           # release altered after vetting fails the build instead of being
           # silently packaged.
           pinned-metadata: ${{ github.workspace }}/.github/release-metadata.json
+          # TRIAL suppressions: embedded-library (static musl binary, same
+          # bytes the bash builder ships) + copyright LGPL tag (lintian
+          # tag drift vs the bash-built releases). Warnings don't fail.
+          lintian-suppress: 'embedded-library,copyright-not-using-common-license-for-lgpl'
 
       - name: Upload builder summary on failure
         # The builder writes build-summary.json (structured failure data) on

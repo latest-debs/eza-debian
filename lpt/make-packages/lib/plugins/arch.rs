@@ -54,7 +54,14 @@ impl Plugin for ArchPlugin {
             cfg.package_name, version, release, arch_name
         );
 
-        let out_dir = ctx.staging_root.join("__out");
+        // Sibling of the staging root, not inside it -- the payload is
+        // staged from the whole staging tree, so an in-tree out dir
+        // would package the artifact into itself.
+        let out_dir = ctx
+            .staging_root
+            .parent()
+            .context("staging root has no parent")?
+            .join("__out");
         std::fs::create_dir_all(&out_dir)?;
         let dest = out_dir.join(&file_name);
 

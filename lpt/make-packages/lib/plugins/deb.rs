@@ -93,9 +93,15 @@ pub(crate) fn archive_staged_tree(ctx: &BuildContext) -> Result<PathBuf> {
         });
     }
 
-    // We need a temp out dir for the .deb file; create under staging_root's
-    // parent temp.
-    let out_dir = ctx.staging_root.join("__out");
+    // Temp out dir for the .deb file: a SIBLING of the staging root, not
+    // inside it -- debarchive tars the whole staging tree, so an in-tree
+    // out dir would package the .deb into itself (lintian:
+    // non-standard-toplevel-dir [__out/]).
+    let out_dir = ctx
+        .staging_root
+        .parent()
+        .context("staging root has no parent")?
+        .join("__out");
     std::fs::create_dir_all(&out_dir)?;
     let deb_dest = out_dir.join(&deb_name);
 

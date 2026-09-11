@@ -56,6 +56,10 @@ inputs:
     description: 'Collector URL for the anonymous attribution ping. Empty (default) skips the ping. (vars context is unavailable inside composite actions, so this is an input, not a repo Variable.)'
     required: false
     default: ''
+  lintian-suppress:
+    description: 'Comma-separated lintian tags to suppress (bash-action suppress_tags parity). Empty by default.'
+    required: false
+    default: ''
 
 outputs:
   packages:
@@ -171,6 +175,10 @@ runs:
         if [ "${{ inputs.allow-unverified }}" = "true" ]; then
           unverified_flag=(--allow-unverified)
         fi
+        suppress_flag=()
+        if [ -n "${{ inputs.lintian-suppress }}" ]; then
+          suppress_flag=(--lintian-suppress "${{ inputs.lintian-suppress }}")
+        fi
 
         # --source: debian-multiarch-builder always generated source
         # packages alongside binary ones (no opt-in flag existed there
@@ -184,7 +192,7 @@ runs:
           --summary \
           --cache-dir "$HOME/.cache/lx/downloads" \
           --api-cache-dir "$HOME/.cache/lx/api" \
-          "${arch_flag[@]}" "${lintian_flag[@]}" "${telemetry_flag[@]}" "${pin_flag[@]}" "${baseline_flag[@]}" "${unverified_flag[@]}"
+          "${arch_flag[@]}" "${lintian_flag[@]}" "${telemetry_flag[@]}" "${pin_flag[@]}" "${baseline_flag[@]}" "${unverified_flag[@]}" "${suppress_flag[@]}"
 
         cd "${{ inputs.output-dir }}"
         packages=$(ls -- *.deb 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
