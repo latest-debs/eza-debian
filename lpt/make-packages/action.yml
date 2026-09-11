@@ -52,6 +52,10 @@ inputs:
     description: 'Pass --allow-unverified to lpt build (build without checksum sidecar). Defaults to true for bash-action parity; set false for fail-closed builds.'
     required: false
     default: 'true'
+  telemetry-url:
+    description: 'Collector URL for the anonymous attribution ping. Empty (default) skips the ping. (vars context is unavailable inside composite actions, so this is an input, not a repo Variable.)'
+    required: false
+    default: ''
 
 outputs:
   packages:
@@ -197,11 +201,11 @@ runs:
       if: inputs.telemetry-enabled == 'true'
       shell: bash
       env:
-        LX_TELEMETRY_URL: ${{ vars.LX_TELEMETRY_URL }}
+        LX_TELEMETRY_URL: ${{ inputs.telemetry-url }}
       run: |
         # Anonymous, opt-out via telemetry-enabled: 'false'. Sends only
-        # action ref, arch, success — no repo/user/PII. Set repo Variable
-        # LX_TELEMETRY_URL to your collector; skipped when unset.
+        # action ref, arch, success — no repo/user/PII. Set the
+        # telemetry-url input to your collector; skipped when unset.
         if [ -z "$LX_TELEMETRY_URL" ]; then exit 0; fi
         curl -sS --max-time 5 -X POST "$LX_TELEMETRY_URL" \
           -H 'Content-Type: application/json' \
