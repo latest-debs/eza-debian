@@ -141,12 +141,21 @@ jobs:
           key: apt-${{ runner.os }}-${{ hashFiles('package.yaml') }}
           restore-keys: apt-${{ runner.os }}-
 
-      - name: Build eza
-        uses: ranjithrajv/debian-multiarch-builder@7df44acd35d720c0442320f4535d481f72251ecc # v.0.1a30
+      - name: Checkout lpt action (trial)
+        uses: actions/checkout@v5
+        with:
+          # TODO: point at published lpt repo/ref once extracted.
+          repository: ranjithrajv/debian
+          sparse-checkout: make-packages
+          sparse-checkout-cone-mode: false
+          path: lpt
+          ref: main
+
+      - name: Build eza (lpt trial)
+        # TRIAL: lpt Rust CLI instead of bash debian-multiarch-builder.
+        # Keep smoke/release unchanged for comparison.
+        uses: ./lpt/make-packages
         env:
-          # Authenticate GitHub API calls from the builder; anonymous calls
-          # from shared runner IPs are rate-limited (60/h) and caused
-          # architecture detection to find zero release assets.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           config-file: 'package.yaml'
@@ -154,6 +163,8 @@ jobs:
           build-version: ${{ needs.prepare.outputs.build_version }}
           architecture: ${{ inputs.architecture }}
           lintian-check: ${{ inputs.enable_lintian }}
+          output-dir: '.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           # Provenance pin recorded at vet time (add-package.sh scaffold).
           # The builder verifies the downloaded upstream bytes against the
           # pinned SHA-256 when the release matches the vetted version, so a
