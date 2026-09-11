@@ -1,0 +1,190 @@
+name: 'lx: Latest Package Tool'
+description: 'Build Debian packages for multiple architectures from upstream GitHub releases. Drop-in replacement for ranjithrajv/debian-multiarch-builder: same inputs/outputs, backed by the lx Rust CLI instead of the bash implementation.'
+author: 'ranjithrajv'
+
+branding:
+  icon: 'package'
+  color: 'red'
+
+inputs:
+  config-file:
+    description: 'Path to the package.yaml configuration file'
+    required: true
+  version:
+    description: 'Version of the software to build'
+    required: true
+  build-version:
+    description: 'Debian build version number'
+    required: true
+  architecture:
+    description: 'Architecture to build (amd64, arm64, armel, armhf, i386, ppc64el, s390x, riscv64, loong64, or "all")'
+    required: false
+    default: 'all'
+  max-parallel:
+    description: 'Maximum number of parallel architecture builds'
+    required: false
+    default: '4'
+  lintian-check:
+    description: 'Enable Lintian checks on each built .deb'
+    required: false
+    default: 'false'
+  telemetry-enabled:
+    description: 'Enable build telemetry/metrics collection'
+    required: false
+    default: 'true'
+  save-baseline:
+    description: 'Save current build metrics as performance baseline (.telemetry/baseline.json) for regression detection'
+    required: false
+    default: 'false'
+  pinned-metadata:
+    description: 'Path to a release-metadata.json provenance pin (captured at vet time). When set and the release matches the vetted version, downloaded upstream assets are verified against the pinned SHA-256 and a mismatch fails the build.'
+    required: false
+    default: ''
+  output-dir:
+    description: 'Directory to write built .deb and .dsc source package files into'
+    required: false
+    default: 'dist'
+  github-token:
+    description: 'GitHub token for API requests (raises the anonymous rate limit). Defaults to the workflow-provided token.'
+    required: false
+    default: ''
+
+outputs:
+  packages:
+    description: 'Space-separated list of generated .deb package filenames'
+    value: ${{ steps.build.outputs.packages }}
+  source-packages:
+    description: 'Space-separated list of generated Debian source package (.dsc) filenames'
+    value: ${{ steps.build.outputs.source-packages }}
+  summary-path:
+    description: 'Path to build-summary.json (package list, sizes, timing, success rate)'
+    value: ${{ steps.build.outputs.summary-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.config-file }}" ]; then
+          echo "::error::Configuration file not found: ${{ inputs.config-file }}"
+          exit 1
+        fi
+
+    - name: Install lintian
+      if: inputs.lintian-check == 'true'
+      shell: bash
+      run: |
+        # lx's --lintian has no Docker fallback (see
+        # docs/decisions/2026-08-20-docker-free-lintian-source.md) -- it
+        # requires a real `lintian` binary on PATH, which GitHub-hosted
+        # runners don't ship by default.
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends lintian
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache lx build
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: ${{ github.action_path }}
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
+    - name: Compute cache date
+      id: cache-date
+      shell: bash
+      run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache lx download/API cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/lx/downloads
+          ~/.cache/lx/api
+        key: lx-cache-${{ github.repository }}-${{ steps.cache-date.outputs.date }}
+        restore-keys: |
+          lx-cache-${{ github.repository }}-
+
+    - name: Build lx
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        cargo build --release --manifest-path "$ACTION_PATH/Cargo.toml"
+        echo "$ACTION_PATH/target/release" >> "$GITHUB_PATH"
+
+    - name: Validate version availability
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+      run: |
+        # Fail fast on a bad `version` with recent-release suggestions
+        # (bash action's pre-check parity), before the full build runs.
+        # `lx validate` resolves the config against the live release and
+        # lists recent tags when the requested one is missing.
+        validate_flag=()
+        if [ -n "${{ inputs.version }}" ]; then
+          validate_flag=(--version "${{ inputs.version }}")
+        fi
+        lx validate "${{ inputs.config-file }}" "${validate_flag[@]}"
+
+    - name: Build packages
+      id: build
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+      run: |
+        arch_flag=()
+        if [ "${{ inputs.architecture }}" != "all" ]; then
+          arch_flag=(--architectures "${{ inputs.architecture }}")
+        fi
+        lintian_flag=()
+        if [ "${{ inputs.lintian-check }}" = "true" ]; then
+          lintian_flag=(--lintian)
+        fi
+        telemetry_flag=()
+        if [ "${{ inputs.telemetry-enabled }}" = "true" ]; then
+          telemetry_flag=(--telemetry)
+        fi
+        pin_flag=()
+        if [ -n "${{ inputs.pinned-metadata }}" ]; then
+          pin_flag=(--pinned-metadata "${{ inputs.pinned-metadata }}")
+        fi
+        baseline_flag=()
+        if [ "${{ inputs.save-baseline }}" = "true" ]; then
+          baseline_flag=(--save-baseline)
+        fi
+
+        # --source: debian-multiarch-builder always generated source
+        # packages alongside binary ones (no opt-in flag existed there
+        # either), so this stays unconditional for drop-in parity.
+        lx build "${{ inputs.config-file }}" \
+          --version "${{ inputs.version }}" \
+          --build-version "${{ inputs.build-version }}" \
+          --max-parallel "${{ inputs.max-parallel }}" \
+          --output "${{ inputs.output-dir }}" \
+          --source \
+          --summary \
+          --cache-dir "$HOME/.cache/lx/downloads" \
+          --api-cache-dir "$HOME/.cache/lx/api" \
+          "${arch_flag[@]}" "${lintian_flag[@]}" "${telemetry_flag[@]}" "${pin_flag[@]}" "${baseline_flag[@]}"
+
+        cd "${{ inputs.output-dir }}"
+        packages=$(ls -- *.deb 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
+        echo "packages=$packages" >> "$GITHUB_OUTPUT"
+        echo "Generated packages: $packages"
+
+        source_packages=$(ls -- *.dsc 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
+        echo "source-packages=$source_packages" >> "$GITHUB_OUTPUT"
+        echo "Generated source packages: $source_packages"
+
+        echo "summary-path=${{ inputs.output-dir }}/build-summary.json" >> "$GITHUB_OUTPUT"
+
+    - name: Upload failed build logs
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-build-logs
+        path: failed-build-logs/
+        if-no-files-found: ignore

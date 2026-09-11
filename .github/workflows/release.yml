@@ -141,19 +141,8 @@ jobs:
           key: apt-${{ runner.os }}-${{ hashFiles('package.yaml') }}
           restore-keys: apt-${{ runner.os }}-
 
-      - name: Checkout lpt action (trial)
-        uses: actions/checkout@v5
-        with:
-          # TODO: point at published lpt repo/ref once extracted.
-          repository: ranjithrajv/debian
-          sparse-checkout: make-packages
-          sparse-checkout-cone-mode: false
-          path: lpt
-          ref: main
-
       - name: Build eza (lpt trial)
-        # TRIAL: lpt Rust CLI instead of bash debian-multiarch-builder.
-        # Keep smoke/release unchanged for comparison.
+        # TRIAL: lpt Rust CLI vendored at lpt/make-packages on this branch.
         uses: ./lpt/make-packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
