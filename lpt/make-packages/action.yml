@@ -149,7 +149,11 @@ runs:
         fi
         pin_flag=()
         if [ -n "${{ inputs.pinned-metadata }}" ]; then
-          pin_flag=(--pinned-metadata "${{ inputs.pinned-metadata }}")
+          if [ -f "${{ inputs.pinned-metadata }}" ]; then
+            pin_flag=(--pinned-metadata "${{ inputs.pinned-metadata }}")
+          else
+            echo "::warning::Pinned metadata not found at ${{ inputs.pinned-metadata }}; building without provenance pin (bash-action parity)"
+          fi
         fi
         baseline_flag=()
         if [ "${{ inputs.save-baseline }}" = "true" ]; then
